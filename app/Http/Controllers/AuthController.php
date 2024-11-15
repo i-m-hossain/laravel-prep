@@ -32,7 +32,8 @@ class AuthController extends Controller
         return response()->json([
             'message'       => 'Login success',
             'access_token'  => $token,
-            'token_type'    => 'Bearer'
+            'token_type'    => 'Bearer',
+            'user' => $user
         ]);
     }
 
@@ -55,7 +56,8 @@ class AuthController extends Controller
         return response()->json([
             'data'          => $user,
             'access_token'  => $token,
-            'token_type'    => 'Bearer'
+            'token_type'    => 'Bearer',
+            'user' => $user
         ]);
     }
     public function logout()
