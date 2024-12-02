@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -10,9 +11,14 @@ use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
+    /**
+     * Get a JWT via given credentials.
+     *
+     * @return JsonResponse
+     */
     public function login(Request $request)
     {
-        
+
         $validator = Validator::make($request->all(),[
             'email'     => 'required|string|max:255',
             'password'  => 'required|string'
@@ -21,20 +27,13 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json($validator->errors());
         }
-        if (! Auth::attempt($credentials)) {
-            return response()->json([
-                'message' => 'User not found'
-            ], 401);
-        }
-        $user= User::where('email', $request->email)->firstOrFail();
-        $token  = $user->createToken('auth_token')->plainTextToken;
+        $credentials = request(['email', 'password']);
 
-        return response()->json([
-            'message'       => 'Login success',
-            'access_token'  => $token,
-            'token_type'    => 'Bearer',
-            'user' => $user
-        ]);
+        if (! $token = auth()->attempt($credentials)) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        return $this->respondWithToken($token);
     }
 
     public function register(Request $request)
@@ -45,26 +44,68 @@ class AuthController extends Controller
             'password'  => 'required|string'
         ]);
         if ($validator->fails()) {
-            return response()->json($validator->errors());
+            return response()->json([
+                'status' => 'error',
+                'errors' => $validator->errors()
+            ], 422);
         }
         $user = User::create([
             'name'      => $request->name,
             'email'     => $request->email,
             'password'  => Hash::make($request->password)
         ]);
-        $token = $user->createToken('auth_token')->plainTextToken;
-        return response()->json([
-            'data'          => $user,
-            'access_token'  => $token,
-            'token_type'    => 'Bearer',
-            'user' => $user
-        ]);
+        $credentials = $request->only('email', 'password');
+        if (! $token = auth()->attempt($credentials)) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        return $this->respondWithToken($token);
+
     }
+    /**
+     * Log the user out (Invalidate the token).
+     *
+     * @return JsonResponse
+     */
     public function logout()
     {
-        Auth::user()->tokens()->delete();
+        auth()->logout();
+
+        return response()->json(['message' => 'Successfully logged out']);
+    }
+
+    /**
+     * Get the authenticated User.
+     *
+     * @return JsonResponse
+     */
+    public function me()
+    {
+        return response()->json(auth()->user());
+    }
+    /**
+     * Refresh a token.
+     *
+     * @return JsonResponse
+     */
+    public function refresh()
+    {
+        return $this->respondWithToken(auth()->refresh());
+    }
+    /**
+     * Get the token array structure.
+     *
+     * @param  string $token
+     *
+     * @return JsonResponse
+     */
+    protected function respondWithToken($token)
+    {
         return response()->json([
-            'message'=>'Logout successful'
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->factory()->getTTL() * 60
         ]);
     }
+
 }
