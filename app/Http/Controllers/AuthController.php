@@ -32,8 +32,8 @@ class AuthController extends Controller
         if (! $token = auth()->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-
-        return $this->respondWithToken($token);
+        $refresh_token = auth()->claims(['refresh' => true])->tokenById(auth()->id());
+        return $this->respondWithToken($token, $refresh_token);
     }
 
     public function register(Request $request)
@@ -58,8 +58,8 @@ class AuthController extends Controller
         if (! $token = auth()->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-
-        return $this->respondWithToken($token);
+        $refresh_token = auth()->claims(['refresh' => true])->tokenById(auth()->id());
+        return $this->respondWithToken($token, $refresh_token);
 
     }
     /**
@@ -69,8 +69,7 @@ class AuthController extends Controller
      */
     public function logout()
     {
-        auth()->logout();
-
+        auth()->logout(); // Invalidate access token
         return response()->json(['message' => 'Successfully logged out']);
     }
 
@@ -90,7 +89,10 @@ class AuthController extends Controller
      */
     public function refresh()
     {
-        return $this->respondWithToken(auth()->refresh());
+        return response()->json([
+            'access_token' => auth()->refresh(),
+            'expires_in' => auth()->factory()->getTTL() * 1,
+        ]);
     }
     /**
      * Get the token array structure.
@@ -99,10 +101,11 @@ class AuthController extends Controller
      *
      * @return JsonResponse
      */
-    protected function respondWithToken($token)
+    protected function respondWithToken($access_token, $refresh_token )
     {
         return response()->json([
-            'access_token' => $token,
+            'access_token' => $access_token,
+            'refresh_token' => auth()->claims(['refresh' => true])->tokenById(auth()->id()),
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL() * 60
         ]);

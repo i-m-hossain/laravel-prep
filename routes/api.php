@@ -18,7 +18,7 @@ use App\Http\Controllers\AuthController;
 Route::post('auth/login', [AuthController::class, 'login']);
 Route::post('auth/register', [AuthController::class, 'register']);
 Route::group([
-    'middleware' => 'api',
+    'middleware' => 'custom.auth',
     'prefix' => 'auth',
 ], function () {
     Route::post('logout', [AuthController::class, 'logout']);

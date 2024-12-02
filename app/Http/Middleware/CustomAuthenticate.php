@@ -11,6 +11,9 @@ class CustomAuthenticate extends  Authenticate
 {
     public function handle($request, Closure $next)
     {
+        if ($request->is('api/auth/refresh')) {
+            return $next($request);
+        }
         try {
             // Call the parent handle method to perform the default authentication check
             parent::handle($request, $next);
